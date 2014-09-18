@@ -118,11 +118,19 @@ FlexElement.prototype.calc = function calc(stringSize, def) {
  */
 FlexElement.prototype.setSize = function setSize(size, dimension, type) {
 
-	var newSize,
+	var calcedSize,
+	    newSize,
 	    sizes;
 
 	sizes = this.getWidthOrHeight(dimension, 'all');
-	newSize = this.getSizeToSet(this.calc(size), sizes, dimension, type);
+	calcedSize = this.calc(size);
+
+console.log(sizes);
+console.log('Calculating new size of ', size, '=', calcedSize, dimension, type);
+
+	newSize = this.getSizeToSet(calcedSize, sizes, dimension, type);
+
+console.log(newSize);
 
 	if (dimension == 'width') {
 		this.element.style.width = newSize + 'px';
@@ -130,7 +138,7 @@ FlexElement.prototype.setSize = function setSize(size, dimension, type) {
 		this.element.style.height = newSize + 'px';
 	}
 
-	return this.getSize(dimension);
+	return this.getWidthOrHeight(dimension, type);
 };
 
 /**
@@ -259,7 +267,12 @@ FlexElement.prototype.getWidthOrHeight = function getWidthOrHeight(dimension, si
 		s = 'width';
 		a = 'left';
 		b = 'right';
-		this.element.style.float = 'left';
+
+		// If this is a flex child we should float it to get the real width
+		if (this.isChild) {
+			this.element.style.float = 'left';
+		}
+
 		clientSize = this.element.clientWidth;
 	} else {
 		S = 'Height';

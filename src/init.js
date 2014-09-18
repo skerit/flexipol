@@ -1,9 +1,16 @@
 document.addEventListener('DOMContentLoaded', function onDOMReady(event) {
 
 	var called = 0,
-	    links = document.getElementsByTagName('link'),
+	    links,
 	    link,
 	    i;
+
+	// Do nothing on browsers that support flex
+	if (typeof document.body.style.flex !== 'undefined') {
+		return;
+	}
+
+	links = document.getElementsByTagName('link');
 
 	function addClass(selectors, className, attributes, debug) {
 

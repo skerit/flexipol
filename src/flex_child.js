@@ -11,11 +11,16 @@ function FlexChild(element, index, parent) {
 
 	this.parent = parent;
 
+	this.isChild = true;
+
 	// Call the super constructor first
 	FlexElement.call(this, element);
 
 	// The order inside the html
 	this.index = index;
+
+	// The row it is on
+	this.row = 0;
 
 	// Remove all custom styling
 	element.style.cssText = '';
@@ -37,7 +42,7 @@ for (var name in FlexElement.prototype) {
  * @param    {String}   sizeType
  */
 FlexChild.prototype.getSize = function getSize(sizeType) {
-	return this.getWidthOrHeight(sizeType, this.parent.dimension);
+	return this.getWidthOrHeight(this.parent.dimension, sizeType);
 };
 
 

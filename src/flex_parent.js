@@ -14,6 +14,8 @@ function FlexParent(element) {
 	// The dimension to use (width or height)
 	this.dimension = null;
 
+	this.isChild = false;
+
 	FlexElement.call(this, element);
 
 	// Array of children, wrapped in FlexElement instance
@@ -100,84 +102,160 @@ FlexParent.prototype.calculate = function calculate() {
 	    childTotal,
 	    childPieces,
 	    spaceLeft,
+	    childSize,
+	    rowPieces,
+	    rowCount,
 	    unitSize,
 	    newSize,
+	    offset,
+	    curRow,
 	    result,
 	    child,
 	    space,
+	    rows,
 	    used,
+	    base,
+	    row,
 	    i;
 
 	childTotal = 0;
 	childPieces = 0;
+	rowCount = [];
+	rowPieces = [];
+	rows = [];
 
-	// Total available width or height for the children
+	// Total available width or height for the children per-row
 	amount = this.getSize();
 
 	console.log(this, amount, this.dimension)
-return;
+
 	// Get the total amount of pieces + total space taken by base size
 	for (i = 0; i < this.children.length; i++) {
 		child = this.children[i];
 
+		if (i == 0) {
+			curRow = 0;
+
+			// Row size tally
+			rows[0] = 0;
+
+			// Row piece tally
+			rowPieces[0] = 0;
+
+			// Children per row count
+			rowCount[0] = 0;
+		}
+
 		child.maxedSize = false;
+		rowCount[0]++;
+		childSize = child.getBaseSize();
 
 		childPieces += child.grow;
-		childTotal += child.getBaseSize();
+
+		// Add this childSize to the total
+		childTotal += childSize;
+
+		// If we've gone over the total available space, go to the next row
+		if (childTotal > amount && this.wrap) {
+
+			// Reset the total for this new line
+			childTotal = childSize;
+
+			// Create new row entries
+			rows[++curRow] = 0;
+			rowPieces[curRow] = 0;
+		}
+
+		// Set the child's row
+		child.row = curRow;
+
+		// Increase the pieces on this row
+		rowPieces[curRow] += child.grow;
+
+		rows[curRow] += childSize;
 	}
 
-	spaceLeft = amount - childTotal;
-	unitSize = ~~(spaceLeft / Math.max(childPieces, 1));
-	used = 0;
+	// Apply every row
+	for (row = 0; row < rows.length; row++) {
 
-	// Now share the units
-	for (i = 0; i < this.children.length; i++) {
-		child = this.children[i];
+		if (this.wrap) {
+			spaceLeft = amount - rows[row];
+			unitSize = ~~(spaceLeft / Math.max(rowPieces[row], 1));
+		} else {
+			spaceLeft = 0;
+			unitSize = 0;
+		}
 
-		if (!child.maxedSize) {
+		// Tally for used size per row
+		used = 0;
 
-			// The new size for this child
-			newSize = child.getBaseSize() + (child.grow * unitSize);
+		// Go over every child of this row
+		for (i = 0; i < this.children.length; i++) {
+			child = this.children[i];
 
-			// Set it and return the actual new size
-			result = child.setSize(newSize, this.dimension);
+			// Skip children of other rows
+			if (child.row < row) {
+				continue;
+			} else if (child.row > row) {
+				break;
+			}
 
-			console.log(child, newSize, result);
+			// Only continue if the child isn't maxed out
+			if (!child.maxedSize) {
 
-			if (newSize > result) {
+				base = child.getBaseSize();
 
-				// Indicate this child is maxed out
-				child.maxedSize = true;
+				// The new size for this child
+				newSize = base + (child.grow * unitSize);
 
-				// Remove the pieces this child takes
-				childPieces -= child.grow;
+				// Set it and return the actual new size
+				result = child.setSize(newSize, this.dimension);
 
-				// Calculate the new sizes to share
-				spaceLeft -= result;
-				unitSize = ~~(spaceLeft / Math.max(childPieces, 1));
+				if (newSize > result) {
 
-				// Reset the loop
-				i = 0;
-				used = 0;
+					// Indicate this child is maxed out
+					child.maxedSize = true;
+
+					// Remove the pieces this child takes
+					rowPieces[curRow] -= child.grow;
+
+					// Calculate the new sizes to share
+					spaceLeft -= result;
+					unitSize = ~~(spaceLeft / Math.max(rowPieces[curRow], 1));
+
+					// Reset the loop
+					i = 0;
+					used = 0;
+				}
+			}
+
+			used += child.getSize();
+		}
+
+		// Calculate the space we have left on this row
+		spaceLeft = amount - used;
+
+		console.log(this.justify, ':', amount, '-', used, '=', spaceLeft, this.element)
+
+		// Calculate the space left again
+		if (this.justify == 'space-between' && spaceLeft > 0) {
+			space = (spaceLeft / Math.max(rowCount[row], 1));
+
+			for (i = 1; i <= rowCount[row]; i++) {
+				child = this.children[i];
+
+				if (child.row < row) {
+					continue;
+				} else if (child.row > row) {
+					break;
+				}
+
+				// #todo: column support (top)
+				child.element.style['left'] = space + 'px';
 			}
 		}
 
-		used += child.getSize();
 	}
-
-	spaceLeft = amount - used;
-
-	console.log(this.justify, ':', amount, '-', used, '=', spaceLeft, this.element)
-
-	// Calculate the space left again
-	if (this.justify == 'space-between' && spaceLeft > 0) {
-		space = ~~(spaceLeft / Math.max(this.children.length -1, 1));
-
-		for (i = 0; i < this.children.length - 1; i++) {
-			this.children[i].element.style['margin-right'] = space + 'px';
-		}
-	}
-
 };
 
 /**
