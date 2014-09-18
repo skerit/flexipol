@@ -16,10 +16,11 @@ html {
 	display: flex;
 	flex-flow: row wrap;
 	font-family: sans-serif;
+	align-items: stretch;
 }
 
 .flex-item {
-	flex: 1 auto;
+	flex: 1 0 auto;
 	background: #f0f0f0;
 }
 

@@ -127,8 +127,6 @@ FlexParent.prototype.calculate = function calculate() {
 	// Total available width or height for the children per-row
 	amount = this.getSize();
 
-	console.log(this, amount, this.dimension)
-
 	// Get the total amount of pieces + total space taken by base size
 	for (i = 0; i < this.children.length; i++) {
 		child = this.children[i];
@@ -254,8 +252,92 @@ FlexParent.prototype.calculate = function calculate() {
 				child.element.style['left'] = space + 'px';
 			}
 		}
-
 	}
+
+	this.doAlignItems(this.children, rows, rowPieces, rowCount);
+};
+
+/**
+ * Align the items
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ *
+ * @param    {Array}   children
+ * @param    {Array}   lines
+ * @param    {Array}   pieces
+ * @param    {Array}   count
+ */
+FlexParent.prototype.doAlignItems = function doAlignItems(children, lines, pieces, count) {
+
+	var parentSize,
+	    lineCount,
+	    childSize,
+	    lineSize,
+	    child,
+	    line, // Rows or columns
+	    i,
+	    S,
+	    s,
+	    a,
+	    b;
+
+	// For aligning the width and height properties are switched
+	if (this.direction == 'column') {
+		S = 'Width';
+		s = 'width';
+		a = 'left';
+		b = 'right';
+	} else {
+		S = 'Height';
+		s = 'height';
+		a = 'top';
+		b = 'bottom';
+	}
+
+	// Get the content size of the parent
+	parentSize = this.getSize(s);
+
+	// Calculate the size a line can be
+	lineSize = ~~(parentSize / lines.length);
+
+	for (line = 0; line < lines.length; line++) {
+
+		lineCount = 0;
+
+		for (i = 0; i < children.length; i++) {
+			child = children[i];
+
+			// Skip children not on the current line
+			if (child.row < line) {
+				continue;
+			} else if (child.line > line) {
+				break;
+			}
+
+			if (this.direction == 'row' && lineCount == 0) {
+				child.element.style.clear = 'left';
+			}
+
+			lineCount++;
+
+			// Get the complete size of the child
+			childSize = child.getWidthOrHeight(s, 'margin');
+
+			// This should actually do a "calculate" on the entire line for the other dimension
+			if (this.alignItems == 'stretch') {
+				child.setSize(lineSize, s, 'margin');
+			} else if (this.alignItems == 'center') {
+
+				child.element.style[a] = ~~((line * (lineSize/2)) + ((lineSize/2) - (childSize / 2))) + 'px';
+				console.log('Setting chld style', a)
+			}
+
+			
+		}
+	}
+
 };
 
 /**

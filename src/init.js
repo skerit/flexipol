@@ -86,6 +86,8 @@ document.addEventListener('DOMContentLoaded', function onDOMReady(event) {
 							addClass(rule.selectors, 'js-p-flexFlow', {flow: dec.value});
 						} else if (dec.property == 'justify-content') {
 							addClass(rule.selectors, 'js-p-flexJustify', {justify: dec.value});
+						} else if (dec.property == 'align-items') {
+							addClass(rule.selectors, 'js-p-flexAlignItems', {'align-items': dec.value});
 						}
 					});
 				});

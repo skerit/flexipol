@@ -125,12 +125,7 @@ FlexElement.prototype.setSize = function setSize(size, dimension, type) {
 	sizes = this.getWidthOrHeight(dimension, 'all');
 	calcedSize = this.calc(size);
 
-console.log(sizes);
-console.log('Calculating new size of ', size, '=', calcedSize, dimension, type);
-
 	newSize = this.getSizeToSet(calcedSize, sizes, dimension, type);
-
-console.log(newSize);
 
 	if (dimension == 'width') {
 		this.element.style.width = newSize + 'px';
@@ -157,25 +152,49 @@ console.log(newSize);
  * @param    {Object}   sizes       `all` result of #getWidthOrHeight
  * @param    {String}   dimension   width or height
  * @param    {String}   type        margin, border, padding or content [margin]
+ * @param    {String}   targetType  The target type (override)
  *
  * @return   {Number}
  */
-FlexElement.prototype.getSizeToSet = function getSizeToSet(newSize, sizes, dimension, type) {
+FlexElement.prototype.getSizeToSet = function getSizeToSet(newSize, _sizes, _dimension, _type, _targetType) {
 
 	var reachedTarget,
 	    targetMinus,
 	    targetExtra,
 	    reachedType,
+	    targetType,
 	    extraIsSet,
 	    baseIsSet,
+	    dimension,
 	    allSet,
 	    result,
+	    sizes,
 	    chain,
+	    type,
 	    ct,
 	    i;
 
+	if (typeof _sizes !== 'object') {
+		targetType = _type;
+		type = _dimension;
+		dimension = _sizes;
+	} else {
+		sizes = _sizes;
+		type = _type;
+		dimension = _dimension;
+		targetType = _targetType;
+	}
+
 	if (!type) {
 		type = 'margin';
+	}
+
+	if (!sizes) {
+		sizes = this.getWidthOrHeight(dimension, 'all');
+	}
+
+	if (!targetType) {
+		targetType = sizes.sizing;
 	}
 
 	chain = ['margin', 'border', 'padding', 'content'];
@@ -189,7 +208,7 @@ FlexElement.prototype.getSizeToSet = function getSizeToSet(newSize, sizes, dimen
 			reachedType = true;
 		}
 
-		if (sizes.sizing == ct) {
+		if (targetType == ct) {
 			reachedTarget = true;
 		}
 

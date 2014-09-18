@@ -61,6 +61,9 @@ FlexChild.prototype.getBaseSize = function getBaseSize() {
 	if (typeof this.basisSize == 'number') {
 		hasBasis = true;
 		base = this.basisSize;
+
+		// base is ALWAYS the size of the content box, but we're going to apply it to the margin
+		base = this.getSizeToSet(base, this.parent.dimension, 'content', 'margin');
 	}
 
 	// If there is a min size, that becomes the base
