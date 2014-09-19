@@ -14,9 +14,10 @@ html {
 
 .flex-container {
 	display: flex;
-	flex-flow: column wrap;
+	flex-flow: row wrap;
 	font-family: sans-serif;
 	align-items: center;
+	align-content: stretch;
 }
 
 .flex-item {

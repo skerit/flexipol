@@ -22,8 +22,8 @@ function FlexChild(element, index, parent) {
 	// The row it is on
 	this.row = 0;
 
-	// Remove all custom styling
-	element.style.cssText = '';
+	// Remove custom styling
+	this.resetStyle();
 }
 
 // Make FlexChild inherit the FlexElement methods
@@ -41,20 +41,47 @@ for (var name in FlexElement.prototype) {
  *
  * @param    {String}   sizeType
  */
-FlexChild.prototype.getSize = function getSize(sizeType) {
-	return this.getWidthOrHeight(this.parent.dimension, sizeType);
+FlexChild.prototype.getSize = function getSize(sizeType, dimension) {
+	return this.getWidthOrHeight(dimension||this.parent.dimension, sizeType);
 };
 
+/**
+ * Set the clear
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ *
+ * @param    {String}   clear
+ */
+FlexChild.prototype.setClear = function setClear(clear) {
+	this.element.style.clear = clear;
+};
+
+/**
+ * Get the grow count
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+FlexChild.prototype.getGrow = function getGrow() {
+	return this.grow;
+};
 
 // Base size is when grow & shrink is zero: basis size or actual size or ...
-FlexChild.prototype.getBaseSize = function getBaseSize() {
+FlexChild.prototype.getBaseSize = function getBaseSize(dimension) {
 
 	var hasBasis,
 	    curSize,
 	    base,
 	    min;
 
-	min = this['min'+this.parent.dimension] != null;
+	if (!dimension) {
+		dimension = this.parent.dimension;
+	}
+
+	min = this['min'+dimension] != null;
 	base = 0;
 
 	// basis is practically min & max at the same time
@@ -63,7 +90,7 @@ FlexChild.prototype.getBaseSize = function getBaseSize() {
 		base = this.basisSize;
 
 		// base is ALWAYS the size of the content box, but we're going to apply it to the margin
-		base = this.getSizeToSet(base, this.parent.dimension, 'content', 'margin');
+		base = this.getSizeToSet(base, dimension, 'content', 'margin');
 	}
 
 	// If there is a min size, that becomes the base
@@ -71,7 +98,7 @@ FlexChild.prototype.getBaseSize = function getBaseSize() {
 		base = min;
 	}
 
-	curSize = this.getSize();
+	curSize = this.getSize(undefined, dimension);
 
 	if (!hasBasis && curSize > base) {
 		base = curSize;

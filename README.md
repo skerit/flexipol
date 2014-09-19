@@ -16,8 +16,27 @@ Flexipol is specifically meant to be used on:
 All other browser support the new Flexbox natively and un-prefixes,
 as you can see on the [Can I use...](http://www.caniuse.com/#feat=flexbox) page.
 
-### Currently Supported Properties
+## What's working? (And what's not?)
 
+### Row
+
+* `flex-direction: row` (not row-reverse)
+* `flex-wrap: wrap, nowrap` (not wrap-reverse)
+* `justify-content: flex-start` (not flex-end, center, space-between, space-around)
+* `align-items: stretch, +/-center` (not flex-start, flex-end, baseline)
+* `align-content: stretch` (not flex-start, flex-end, center, space-between, space-around)
+
+### Column
+
+Basically nothing
+
+### Items
+
+* `flex-grow` - yes
+* `flex-basis` - yes
+* `flex-shrink` - no
+* `align-self` - no
+* `order` - no
 
 
 ## Why?

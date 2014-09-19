@@ -1,9 +1,13 @@
 document.addEventListener('DOMContentLoaded', function onDOMReady(event) {
 
-	var called = 0,
+	var handleId,
+	    called = 0,
 	    links,
 	    link,
 	    i;
+
+	window.pel = document.getElementById('demo1');
+	window.chi = document.getElementsByClassName('flex-item')[0];
 
 	// Do nothing on browsers that support flex
 	if (typeof document.body.style.flex !== 'undefined') {
@@ -38,6 +42,15 @@ document.addEventListener('DOMContentLoaded', function onDOMReady(event) {
 		}
 	};
 
+	window.addEventListener('resize', function() {
+
+		if (handleId) {
+			clearTimeout(handleId);
+		}
+
+		handleId = setTimeout(whenDone, 200);
+	}, true);
+
 	function whenDone() {
 
 		var parents,
@@ -45,15 +58,17 @@ document.addEventListener('DOMContentLoaded', function onDOMReady(event) {
 
 		called++;
 
-		if (called != links.length) {
+		if (called < links.length) {
 			return;
 		}
 
 		parents = document.getElementsByClassName('js-p-flexParent');
 
+		console.time('Applied Flexipol');
 		for (var i = 0; i < parents.length; i++) {
 			new FlexParent(parents[i]);
 		}
+		console.timeEnd('Applied Flexipol');
 	}
 
 	for (i = 0; i < links.length; i++) {

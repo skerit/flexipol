@@ -18,8 +18,15 @@ function FlexParent(element) {
 
 	FlexElement.call(this, element);
 
+	// Make this parent relative
+	element.style.position = 'relative';
+
 	// Array of children, wrapped in FlexElement instance
 	this.children = this.getChildren('js-p-flexChild');
+
+	// Get the maximum sizes this parent can be on the inside
+	this.peakWidth = this.calculateMaxSize('width', 'content');
+	this.peakHeight = this.calculateMaxSize('height', 'content');
 
 	window.p = this;
 
@@ -78,7 +85,90 @@ FlexParent.prototype.getConfig = function getConfig() {
 	}
 };
 
-function FlexCollection(children, direction, parentDirection) {
+/**
+ * Return the maximum size this parent can be.
+ * It does this by maxing out the children.
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+FlexParent.prototype.getMaxSize = function getMaxSize(dimension) {
+
+	if (!dimension) {
+		dimension = this.dimension;
+	}
+
+	if (dimension == 'height') {
+		return this.peakHeight;
+	} else {
+		return this.peakWidth;
+	}
+};
+
+/**
+ * Calculate the maximum size this parent can be.
+ * It does this by maxing out the children.
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+FlexParent.prototype.calculateMaxSize = function calculateMaxSize(dimension, type) {
+
+	var result,
+	    child,
+	    i;
+
+	// Float all of the children
+	for (i = 0; i < this.children.length; i++) {
+		child = this.children[i].element;
+
+		child.style.float = 'left';
+
+		if (dimension == 'width') {
+			child.style.clear = '';
+		} else {
+			child.style.clear = 'both';
+		}
+	}
+
+	// Make sure to push it over the threshhold
+	if (dimension == 'width') {
+		this.children[i-1].element.style.marginRight = '50000px';
+	} else {
+		this.children[i-1].element.style.marginBottom = '50000px';
+	}
+
+	// Get the result
+	result = this.getWidthOrHeight(dimension, type);
+
+	// Unfloat all of the children
+	for (i = 0; i < this.children.length; i++) {
+		child = this.children[i].element;
+		child.style.float = '';
+		child.style.clear = '';
+	}
+
+	// Reset the silly margins
+	this.children[i-1].element.style.marginRight = '';
+	this.children[i-1].element.style.marginBottom = '';
+
+	return result;
+};
+
+function FlexCollection(children, direction, parent) {
+
+	var grouped,
+	    i;
+
+	if (children.length && Array.isArray(children[0])) {
+		grouped = [];
+		for (i = 0; i < children.length; i++) {
+			grouped[i] = new FlexCollection(children[i], direction, parent);
+		}
+		children = grouped;
+	}
 
 	// The children in this collection (can be only 1)
 	this.children = children;
@@ -86,11 +176,14 @@ function FlexCollection(children, direction, parentDirection) {
 	// The direction to calculate
 	this.direction = direction;
 
+	// The parent container of this collection
+	this.parent = parent;
+
 	// The direction of the actual container
-	this.parentDirection = parentDirection;
+	this.parentDirection = parent.direction;
 
 	// Is this going to be a nested calculation?
-	this.nested == !(direction == parentDirection);
+	this.nested == !(direction == this.parentDirection);
 
 	if (this.nested) {
 		this.grow = 1;
@@ -112,7 +205,7 @@ function FlexCollection(children, direction, parentDirection) {
 	}
 
 	// And also of the original direction
-	if (parentDirection == 'column') {
+	if (this.parentDirection == 'column') {
 		this.So = 'Width';
 		this.so = 'width';
 		this.ao = 'left';
@@ -123,6 +216,8 @@ function FlexCollection(children, direction, parentDirection) {
 		this.ao = 'top';
 		this.bo = 'bottom';
 	}
+
+	this.dimension = this.s;
 
 };
 
@@ -146,9 +241,9 @@ FlexCollection.prototype.getBaseSize = function getBaseSize() {
 
 		// For nested ones, just get the current size
 		if (this.nested) {
-			temp = child.getWidthOrHeight(this.s);
+			temp = child.getWidthOrHeight(this.so);
 		} else {
-			temp = child.getBaseSize();
+			temp = child.getBaseSize(this.so);
 		}
 
 		if (temp > result) {
@@ -163,11 +258,68 @@ FlexCollection.prototype.setSize = function setSize(size, dimension, type) {
 
 	var i;
 
-	for (i = 0; i < this.children.length; i++) {
-		this.children[i].setSize(size, dimension, type);
+	// Only set the size if stretch is true!
+	if (this.parent.alignItems == 'stretch') {
+		for (i = 0; i < this.children.length; i++) {
+			this.children[i].setSize(size, dimension, type);
+		}
+
+		return this.getWidthOrHeight(dimension, type);
 	}
 
-	return this.getWidthOrHeight(dimension, type);
+	// If we don't change the size, we'll probably need to align it
+	this.setAlignItems(size, dimension, type);
+
+	return size;
+};
+
+/**
+ * If no stretching is wanted: align the items
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+FlexCollection.prototype.setAlignItems = function setAlignItems(size, dimension, type) {
+
+	var temp;
+
+	temp = this.getWidthOrHeight(dimension, type);
+
+	if (this.direction == 'column' && this.parent.alignItems == 'center') {
+		this.addMargin('Top', (size-temp)/2);
+		this.addMargin('Bottom', (size-temp)/2);
+	}
+};
+
+/**
+ * Set the top margin
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ *
+ * @param    {String}   sizeType
+ */
+FlexCollection.prototype.addMargin = function addMargin(tb, amount) {
+
+	var style,
+	    child,
+	    temp,
+	    i;
+
+	for (i = 0; i < this.children.length; i++) {
+		child = this.children[i];
+
+		// First reset the style
+		child.element.style['margin'+tb] = '';
+
+		style = getStyles(this.children[i].element);
+		temp = child.calc(style['margin-' + tb.toLowerCase()]) || 0;
+		temp += amount;
+
+		child.element.style['margin'+tb] = temp + 'px';
+	}
 };
 
 /**
@@ -182,6 +334,39 @@ FlexCollection.prototype.setSize = function setSize(size, dimension, type) {
  */
 FlexCollection.prototype.getSize = function getSize(sizeType) {
 	return this.getWidthOrHeight(this.dimension, sizeType);
+};
+
+/**
+ * Get the grow count
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+FlexCollection.prototype.getGrow = function getGrow() {
+
+	if (this.parent.alignItems == 'stretch') {
+		return 1;
+	}
+
+	// We actually use setSize to set the center when it shouldn't grow,
+	// so always return 1
+	return 1;
+};
+
+/**
+ * Set the clear
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ *
+ * @param    {String}   clear
+ */
+FlexCollection.prototype.setClear = function setClear(clear) {
+	if (!this.nested) {
+		this.children[0].element.style.clear = clear;
+	}
 };
 
 /**
@@ -212,6 +397,8 @@ FlexCollection.prototype.getWidthOrHeight = function getWidthOrHeight(dimension,
 		if (temp > result) {
 			result = temp;
 		}
+
+		console.log('GWOH:', dimension, result)
 	}
 
 	return result;
@@ -228,24 +415,49 @@ FlexParent.prototype.getSize = function getSize(dimension) {
 	return this.getWidthOrHeight(dimension || this.dimension, 'content');
 };
 
-FlexParent.prototype.calculateGroup = function calculateGroup(children, direction) {
+FlexParent.prototype.calculateGroup = function calculateGroup(children, direction, simulated) {
 
-	var collection,
+	var alignedChildren,
+	    childPieces,
+	    collection,
+	    childTotal,
+	    peakAmount,
+	    sDirection,
 	    rowPieces,
+	    dimension,
+	    rowCount,
+	    amount,
 	    child,
 	    rows,
+	    temp,
 	    i;
 
 	childTotal = 0;
 	childPieces = 0;
+	alignedChildren = [];
 	rowCount = [];
 	rowPieces = [];
 	rows = [];
 
-	// Total available width or height for the children per-row
-	amount = this.getSize();
+	if (!direction) {
+		direction = this.direction;
+	}
 
-	collection = new FlexCollection(children, direction, this.direction);
+	if (direction == 'column') {
+		dimension = 'height';
+	} else {
+		dimension = 'width';
+	}
+
+	// Peak amount of available with or height. Used for calculating rows/columns
+	peakAmount = this.getMaxSize(dimension);
+
+	// Total available width or height for the children per-row
+	amount = this.getWidthOrHeight(dimension);
+
+	console.log('Maximum size of container is', amount);
+
+	collection = new FlexCollection(children, direction, this);
 
 	for (i = 0; i < collection.children.length; i++) {
 		child = collection.children[i];
@@ -261,19 +473,22 @@ FlexParent.prototype.calculateGroup = function calculateGroup(children, directio
 
 			// Children per row count
 			rowCount[0] = 0;
+
+			// Grouping the children per row/column/line
+			alignedChildren[0] = [];
 		}
 
 		child.maxedSize = false;
 		rowCount[0]++;
 		childSize = child.getBaseSize();
 
-		childPieces += child.grow;
+		childPieces += child.getGrow();
 
 		// Add this childSize to the total
 		childTotal += childSize;
 
 		// If we've gone over the total available space, go to the next row
-		if (childTotal > amount && this.wrap) {
+		if (childTotal > peakAmount && this.wrap) {
 
 			// Reset the total for this new line
 			childTotal = childSize;
@@ -281,13 +496,17 @@ FlexParent.prototype.calculateGroup = function calculateGroup(children, directio
 			// Create new row entries
 			rows[++curRow] = 0;
 			rowPieces[curRow] = 0;
+			alignedChildren[curRow] = [];
 		}
 
 		// Set the child's row
 		child.row = curRow;
 
+		// Add this child to this grouped line
+		alignedChildren[curRow].push(child);
+
 		// Increase the pieces on this row
-		rowPieces[curRow] += child.grow;
+		rowPieces[curRow] += child.getGrow();
 
 		rows[curRow] += childSize;
 	}
@@ -326,10 +545,13 @@ FlexParent.prototype.calculateGroup = function calculateGroup(children, directio
 				base = child.getBaseSize();
 
 				// The new size for this child
-				newSize = base + (child.grow * unitSize);
+				newSize = base + (child.getGrow() * unitSize);
 
+				console.log('Setting childsize: ', newSize, dimension, 'Grow:', child.getGrow())
+				console.log('Base', base, 'unit:', unitSize)
+//if (simulated) return;
 				// Set it and return the actual new size
-				result = child.setSize(newSize, this.dimension);
+				result = child.setSize(newSize, dimension);
 
 				if (newSize > result) {
 
@@ -337,7 +559,7 @@ FlexParent.prototype.calculateGroup = function calculateGroup(children, directio
 					child.maxedSize = true;
 
 					// Remove the pieces this child takes
-					rowPieces[curRow] -= child.grow;
+					rowPieces[curRow] -= child.getGrow();
 
 					// Calculate the new sizes to share
 					spaceLeft -= result;
@@ -347,6 +569,12 @@ FlexParent.prototype.calculateGroup = function calculateGroup(children, directio
 					i = 0;
 					used = 0;
 				}
+			}
+
+			// Apply the correct clearing (for row or column)
+			if (direction == 'column') {
+				console.log('Setting clear')
+				child.setClear('both');
 			}
 
 			used += child.getSize();
@@ -375,6 +603,24 @@ FlexParent.prototype.calculateGroup = function calculateGroup(children, directio
 		// 	}
 		// }
 	}
+
+	if (simulated || !alignedChildren.length) {
+		return;
+	}
+
+	if (direction == 'column') {
+		sDirection = 'row';
+	} else {
+		sDirection = 'column';
+	}
+
+	// temp = [];
+
+	// for (i = 0; i < alignedChildren.length; i++) {
+	// 	temp[i] = new FlexCollection
+	// }
+console.log('\n\n»»»»» ' + direction, '»»»', sDirection + '\n\n');
+	this.calculateGroup(alignedChildren, sDirection, true);
 
 };
 

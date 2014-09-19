@@ -104,6 +104,44 @@ FlexElement.prototype.calc = function calc(stringSize, def) {
 };
 
 /**
+ * Reset all `styles` properties needed for Flexipol to work
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ *
+ */
+FlexElement.prototype.resetStyle = function resetStyle() {
+
+	var style = this.element.style;
+
+	// Float stuff
+	style.float = '';
+	style.clear = '';
+
+	// Dimensions
+	style.maxHeight = '';
+	style.minHeight ='';
+	style.height = '';
+	style.maxWidth = '';
+	style.minWidth = '';
+	style.width = '';
+
+	// Margins
+	style.margin = '';
+	style.marginBottom = '';
+	style.marginLeft = '';
+	style.marginRight = '';
+	style.marginTop = '';
+
+	// Positioning
+	style.top = '';
+	style.bottom = '';
+	style.left = '';
+	style.right = '';
+};
+
+/**
  * Set the size of the element
  *
  * @author   Jelle De Loecker   <jelle@codedor.be>
@@ -262,6 +300,7 @@ FlexElement.prototype.getWidthOrHeight = function getWidthOrHeight(dimension, si
 	    sizing,
 	    result,
 	    style,
+	    ori,
 	    el,
 	    S,
 	    s,
@@ -282,6 +321,7 @@ FlexElement.prototype.getWidthOrHeight = function getWidthOrHeight(dimension, si
 
 	// If this is a flex child we should float it to get the real width
 	if (this.isChild) {
+		ori = this.element.style.float;
 		this.element.style.float = 'left';
 	}
 
@@ -291,7 +331,6 @@ FlexElement.prototype.getWidthOrHeight = function getWidthOrHeight(dimension, si
 		s = 'width';
 		a = 'left';
 		b = 'right';
-
 		clientSize = this.element.clientWidth;
 	} else {
 		S = 'Height';
