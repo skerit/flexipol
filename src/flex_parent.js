@@ -78,6 +78,145 @@ FlexParent.prototype.getConfig = function getConfig() {
 	}
 };
 
+function FlexCollection(children, direction, parentDirection) {
+
+	// The children in this collection (can be only 1)
+	this.children = children;
+
+	// The direction to calculate
+	this.direction = direction;
+
+	// The direction of the actual container
+	this.parentDirection = parentDirection;
+
+	// Is this going to be a nested calculation?
+	this.nested == !(direction == parentDirection);
+
+	if (this.nested) {
+		this.grow = 1;
+	} else {
+		this.grow = children[0].grow;
+	}
+
+	// Set the properties of interest
+	if (direction == 'column') {
+		this.S = 'Width';
+		this.s = 'width';
+		this.a = 'left';
+		this.b = 'right';
+	} else {
+		this.S = 'Height';
+		this.s = 'height';
+		this.a = 'top';
+		this.b = 'bottom';
+	}
+
+	// And also of the original direction
+	if (parentDirection == 'column') {
+		this.So = 'Width';
+		this.so = 'width';
+		this.ao = 'left';
+		this.bo = 'right';
+	} else {
+		this.So = 'Height';
+		this.so = 'height';
+		this.ao = 'top';
+		this.bo = 'bottom';
+	}
+
+};
+
+/**
+ * Return the base size of this collection
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ */
+FlexCollection.prototype.getBaseSize = function getBaseSize() {
+
+	var result,
+	    child,
+	    temp;
+
+	result = 0;
+
+	for (i = 0; i < this.children.length; i++) {
+		child = this.children[i];
+
+		// For nested ones, just get the current size
+		if (this.nested) {
+			temp = child.getWidthOrHeight(this.s);
+		} else {
+			temp = child.getBaseSize();
+		}
+
+		if (temp > result) {
+			result = temp;
+		}
+	}
+
+	return result;
+};
+
+FlexCollection.prototype.setSize = function setSize(size, dimension, type) {
+
+	var i;
+
+	for (i = 0; i < this.children.length; i++) {
+		this.children[i].setSize(size, dimension, type);
+	}
+
+	return this.getWidthOrHeight(dimension, type);
+};
+
+/**
+ * Get the size as it is now,
+ * for the direction of the parent.
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ *
+ * @param    {String}   sizeType
+ */
+FlexCollection.prototype.getSize = function getSize(sizeType) {
+	return this.getWidthOrHeight(this.dimension, sizeType);
+};
+
+/**
+ * Get the width or height of the collection
+ *
+ * @author   Jelle De Loecker   <jelle@codedor.be>
+ * @since    0.1.0
+ * @version  0.1.0
+ *
+ * @param    {String}   dimension   width or height
+ * @param    {String}   sizeType    margin, border, padding, content or all
+ *
+ * @return   {Number|Object}
+ */
+FlexCollection.prototype.getWidthOrHeight = function getWidthOrHeight(dimension, sizeType) {
+
+	var result,
+	    child,
+	    temp;
+
+	result = 0;
+
+	for (i = 0; i < this.children.length; i++) {
+		child = this.children[i];
+
+		temp = child.getWidthOrHeight(dimension, sizeType);
+
+		if (temp > result) {
+			result = temp;
+		}
+	}
+
+	return result;
+};
+
 /**
  * Get the available content size
  *
@@ -87,6 +226,156 @@ FlexParent.prototype.getConfig = function getConfig() {
  */
 FlexParent.prototype.getSize = function getSize(dimension) {
 	return this.getWidthOrHeight(dimension || this.dimension, 'content');
+};
+
+FlexParent.prototype.calculateGroup = function calculateGroup(children, direction) {
+
+	var collection,
+	    rowPieces,
+	    child,
+	    rows,
+	    i;
+
+	childTotal = 0;
+	childPieces = 0;
+	rowCount = [];
+	rowPieces = [];
+	rows = [];
+
+	// Total available width or height for the children per-row
+	amount = this.getSize();
+
+	collection = new FlexCollection(children, direction, this.direction);
+
+	for (i = 0; i < collection.children.length; i++) {
+		child = collection.children[i];
+
+		if (i == 0) {
+			curRow = 0;
+
+			// Row size tally
+			rows[0] = 0;
+
+			// Row piece tally
+			rowPieces[0] = 0;
+
+			// Children per row count
+			rowCount[0] = 0;
+		}
+
+		child.maxedSize = false;
+		rowCount[0]++;
+		childSize = child.getBaseSize();
+
+		childPieces += child.grow;
+
+		// Add this childSize to the total
+		childTotal += childSize;
+
+		// If we've gone over the total available space, go to the next row
+		if (childTotal > amount && this.wrap) {
+
+			// Reset the total for this new line
+			childTotal = childSize;
+
+			// Create new row entries
+			rows[++curRow] = 0;
+			rowPieces[curRow] = 0;
+		}
+
+		// Set the child's row
+		child.row = curRow;
+
+		// Increase the pieces on this row
+		rowPieces[curRow] += child.grow;
+
+		rows[curRow] += childSize;
+	}
+
+	console.log('Amount of free space:', amount);
+	console.log('New: ', rows, rowPieces);
+
+	// Apply every row
+	for (row = 0; row < rows.length; row++) {
+
+		if (this.wrap) {
+			spaceLeft = amount - rows[row];
+			unitSize = ~~(spaceLeft / Math.max(rowPieces[row], 1));
+		} else {
+			spaceLeft = 0;
+			unitSize = 0;
+		}
+
+		// Tally for used size per row
+		used = 0;
+
+		// Go over every child of this row
+		for (i = 0; i < collection.children.length; i++) {
+			child = collection.children[i];
+
+			// Skip children of other rows
+			if (child.row < row) {
+				continue;
+			} else if (child.row > row) {
+				break;
+			}
+
+			// Only continue if the child isn't maxed out
+			if (!child.maxedSize) {
+
+				base = child.getBaseSize();
+
+				// The new size for this child
+				newSize = base + (child.grow * unitSize);
+
+				// Set it and return the actual new size
+				result = child.setSize(newSize, this.dimension);
+
+				if (newSize > result) {
+
+					// Indicate this child is maxed out
+					child.maxedSize = true;
+
+					// Remove the pieces this child takes
+					rowPieces[curRow] -= child.grow;
+
+					// Calculate the new sizes to share
+					spaceLeft -= result;
+					unitSize = ~~(spaceLeft / Math.max(rowPieces[curRow], 1));
+
+					// Reset the loop
+					i = 0;
+					used = 0;
+				}
+			}
+
+			used += child.getSize();
+		}
+
+		// Calculate the space we have left on this row
+		spaceLeft = amount - used;
+
+		console.log(this.justify, ':', amount, '-', used, '=', spaceLeft, this.element)
+
+		// Calculate the space left again
+		// if (this.justify == 'space-between' && spaceLeft > 0) {
+		// 	space = (spaceLeft / Math.max(rowCount[row], 1));
+
+		// 	for (i = 1; i <= rowCount[row]; i++) {
+		// 		child = this.children[i];
+
+		// 		if (child.row < row) {
+		// 			continue;
+		// 		} else if (child.row > row) {
+		// 			break;
+		// 		}
+
+		// 		// #todo: column support (top)
+		// 		child.element.style['left'] = space + 'px';
+		// 	}
+		// }
+	}
+
 };
 
 /**
@@ -117,6 +406,8 @@ FlexParent.prototype.calculate = function calculate() {
 	    base,
 	    row,
 	    i;
+
+	return this.calculateGroup(this.children, this.direction);
 
 	childTotal = 0;
 	childPieces = 0;
@@ -172,6 +463,10 @@ FlexParent.prototype.calculate = function calculate() {
 
 		rows[curRow] += childSize;
 	}
+
+	
+	console.log('Original: ', rows, rowPieces);
+return;
 
 	// Apply every row
 	for (row = 0; row < rows.length; row++) {
@@ -235,25 +530,25 @@ FlexParent.prototype.calculate = function calculate() {
 
 		console.log(this.justify, ':', amount, '-', used, '=', spaceLeft, this.element)
 
-		// Calculate the space left again
-		if (this.justify == 'space-between' && spaceLeft > 0) {
-			space = (spaceLeft / Math.max(rowCount[row], 1));
+		//Calculate the space left again
+		// if (this.justify == 'space-between' && spaceLeft > 0) {
+		// 	space = (spaceLeft / Math.max(rowCount[row], 1));
 
-			for (i = 1; i <= rowCount[row]; i++) {
-				child = this.children[i];
+		// 	for (i = 1; i <= rowCount[row]; i++) {
+		// 		child = this.children[i];
 
-				if (child.row < row) {
-					continue;
-				} else if (child.row > row) {
-					break;
-				}
+		// 		if (child.row < row) {
+		// 			continue;
+		// 		} else if (child.row > row) {
+		// 			break;
+		// 		}
 
-				// #todo: column support (top)
-				child.element.style['left'] = space + 'px';
-			}
-		}
+		// 		// #todo: column support (top)
+		// 		child.element.style['left'] = space + 'px';
+		// 	}
+		// }
 	}
-
+return;
 	this.doAlignItems(this.children, rows, rowPieces, rowCount);
 };
 

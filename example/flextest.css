@@ -14,9 +14,9 @@ html {
 
 .flex-container {
 	display: flex;
-	flex-flow: row wrap;
+	flex-flow: column wrap;
 	font-family: sans-serif;
-	align-items: stretch;
+	align-items: center;
 }
 
 .flex-item {
@@ -41,6 +41,7 @@ figure div span {
 
 .demo {
 	min-height: 500px;
+	outline: 1px dotted green;
 }
 
 .js-p-flexParent:after {
@@ -48,3 +49,24 @@ figure div span {
 	display: table;
 	clear: both;
 }
+
+/* CSS code to enable chrome 28 support
+.flex-container {
+	display: -webkit-flex;
+	-webkit-flex-flow: column wrap;
+	-webkit-align-items: center;
+}
+
+.flex-item {
+	-webkit-flex: 1 0 auto;
+}
+
+figure > div {
+	display: -webkit-inline-flex;
+	-webkit-justify-content: center;
+}
+
+figure div span {
+	-webkit-align-self: center;
+}
+*/

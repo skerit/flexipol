@@ -280,17 +280,17 @@ FlexElement.prototype.getWidthOrHeight = function getWidthOrHeight(dimension, si
 	// Get the boxsize model
 	boxSizing = style['box-sizing'];
 
+	// If this is a flex child we should float it to get the real width
+	if (this.isChild) {
+		this.element.style.float = 'left';
+	}
+
 	// Make sure it floats to calculate the width!
 	if (dimension == 'width') {
 		S = 'Width';
 		s = 'width';
 		a = 'left';
 		b = 'right';
-
-		// If this is a flex child we should float it to get the real width
-		if (this.isChild) {
-			this.element.style.float = 'left';
-		}
 
 		clientSize = this.element.clientWidth;
 	} else {
